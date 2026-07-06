@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beacon — Website Health, SEO & Security Audit</title>
+    <meta name="description" content="Point Beacon at any website for an instant health, SEO, performance and security report — with a scored, actionable checklist." />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="glow" aria-hidden="true"></div>
+
+    <header class="hero">
+      <div class="brand">
+        <img src="logo.svg" alt="" width="44" height="44" />
+        <span class="brand-name">Beacon</span>
+      </div>
+      <h1>Is your website healthy?</h1>
+      <p class="sub">Instant health, SEO, performance &amp; security audit for any live site — no sign-up, no keys.</p>
+
+      <form id="audit-form" class="search">
+        <input
+          id="url-input"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          placeholder="Enter a website, e.g.  wikipedia.org"
+          aria-label="Website URL"
+        />
+        <button id="audit-btn" type="submit">Audit</button>
+      </form>
+      <div class="examples">
+        <span>Try:</span>
+        <button class="chip" data-url="https://wikipedia.org">wikipedia.org</button>
+        <button class="chip" data-url="https://github.com">github.com</button>
+        <button class="chip" data-url="https://example.com">example.com</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Loading -->
+      <div id="loading" class="state" hidden>
+        <div class="spinner"></div>
+        <p>Fetching and analysing <b id="loading-url"></b>…</p>
+      </div>
+
+      <!-- Error -->
+      <div id="error" class="state error" hidden>
+        <span class="err-icon">⚠️</span>
+        <p id="error-msg"></p>
+      </div>
+
+      <!-- Report -->
+      <section id="report" hidden>
+        <div class="summary card">
+          <div class="score">
+            <svg viewBox="0 0 120 120" class="ring" width="132" height="132">
+              <circle class="ring-track" cx="60" cy="60" r="52" />
+              <circle id="ring-fill" class="ring-fill" cx="60" cy="60" r="52" transform="rotate(-90 60 60)" />
+              <text id="ring-score" x="60" y="56" class="ring-score">–</text>
+              <text x="60" y="78" class="ring-label">/ 100</text>
+            </svg>
+            <div class="grade" id="grade">–</div>
+          </div>
+          <div class="summary-body">
+            <div class="audited">
+              <span class="dot" id="status-dot"></span>
+              <a id="final-url" href="#" target="_blank" rel="noreferrer noopener">—</a>
+            </div>
+            <div class="tallies">
+              <span class="tally pass"><b id="t-pass">0</b> passed</span>
+              <span class="tally warn"><b id="t-warn">0</b> warnings</span>
+              <span class="tally fail"><b id="t-fail">0</b> failed</span>
+            </div>
+            <div class="facts" id="facts"></div>
+          </div>
+        </div>
+
+        <div id="categories" class="categories"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>🔦 Beacon · real-time website auditor</span>
+      <span>Built with Node.js + Express · no database, no API keys</span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

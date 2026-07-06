@@ -1,0 +1,14 @@
+# Render Blueprint — deploys Beacon as a free web service.
+# One-click: push to GitHub, then in Render choose "New +" -> "Blueprint" and
+# point it at this repo. No environment variables, no database.
+services:
+  - type: web
+    name: beacon
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

@@ -1,103 +1,111 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="Nimbus" width="76" />
+<img src="public/logo.svg" alt="Beacon" width="72" />
 
-# Nimbus
+# 🔦 Beacon
 
-### Live serverless edge console
+### Instant website health, SEO &amp; security audit
 
-<em>A real-time dashboard that runs on serverless functions and visualises cloud-native patterns — serverless compute, edge/geo awareness, live latency, and rate limiting — in one glance.</em>
+<em>Point Beacon at any live website and get a real, scored report — performance, SEO, security headers, and best practices — in seconds.</em>
 
 <p>
-  <img alt="Serverless" src="https://img.shields.io/badge/architecture-serverless-22d3ee">
-  <img alt="Vercel" src="https://img.shields.io/badge/deploy-Vercel-000000?logo=vercel&logoColor=white">
-  <img alt="Zero config" src="https://img.shields.io/badge/build-zero--config-8b5cf6">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-6%2F6%20passing-34d399">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white">
+  <img alt="Express" src="https://img.shields.io/badge/Express-server-000000?logo=express&logoColor=white">
+  <img alt="Deploy" src="https://img.shields.io/badge/deploy-Render-46E3B7">
   <img alt="No keys" src="https://img.shields.io/badge/API%20keys-none-34d399">
+  <img alt="No DB" src="https://img.shields.io/badge/database-none-34d399">
 </p>
 
 </div>
 
 ---
 
-## ☁️ What it is
+## ✨ What it does
 
-**Nimbus** is a polished, single-page **operations console** whose panels are powered by
-**live serverless functions**. It's built to demonstrate cloud-engineering fundamentals in a
-way you can *see and interact with*:
+Type in a URL. Beacon's server fetches that site (following redirects), parses the HTML,
+inspects the HTTP response, and returns a graded report:
 
-| Panel | Cloud concept it shows |
-| --- | --- |
-| **Serverless Health** | Live function invocation · cold vs. warm starts · runtime introspection |
-| **Edge Latency** | Real-time performance monitoring (round-trip sampling + live sparkline) |
-| **Edge Location** | Global edge/CDN + per-request geo awareness |
-| **Rate Limiter** | A token-bucket limiter (HTTP 429) — a core API-gateway pattern, from scratch |
-| **Request Inspector** | Request handling + privacy-aware IP masking |
-| **Architecture** | The stateless, auto-scaling serverless design at a glance |
+- **Performance** — response time, page weight, redirect count, status.
+- **SEO** — title & meta description quality, single H1, canonical URL, `lang`, Open Graph tags.
+- **Security** — HTTPS, HSTS, Content-Security-Policy, `X-Content-Type-Options`, clickjacking protection, referrer policy.
+- **Best practices** — mobile viewport, favicon, image `alt` coverage, correct `Content-Type`.
 
-> **Resilient by design:** if the serverless endpoints are ever unreachable, every panel
-> transparently switches to clearly-labelled **demo mode** — so the console never looks broken.
+Every check is scored and rolled up into an overall **0–100 score and A–F grade**.
 
----
+## 🧠 Why it needs a real server (and why that's the point)
 
-## 🧱 Architecture
+A browser **cannot** fetch and inspect other websites — cross-origin (CORS) rules block it.
+So Beacon runs a small **Node.js + Express server** that performs the request server-side.
+That's a genuine, real-world reason for a backend — exactly the kind of thing a cloud/backend
+developer builds.
 
-```
-                 ┌─────────────────────────────┐
-   Browser  ──▶  │   Global Edge / CDN (static) │  ──▶  index.html · app.js · styles.css
-                 └──────────────┬──────────────┘
-                                │  /api/*
-                                ▼
-                 ┌─────────────────────────────┐
-                 │   Serverless Functions (λ)   │  health · ping · region · echo · ratelimit
-                 │   stateless · auto-scaling   │
-                 └─────────────────────────────┘
-```
-
-- **Static frontend** served from a global CDN — no framework, **no build step** (nothing to break).
-- **Serverless functions** (`/api/*`) — pure Node, **zero dependencies**, stateless, pay-per-use.
-- **Config-as-code** in [`vercel.json`](./vercel.json) (security headers, cache policy).
-- **CI/CD**: every `git push` triggers an automatic deploy.
-
-### Cloud skills demonstrated
-`Serverless` · `Edge / CDN` · `Stateless design` · `Rate limiting (token bucket)` ·
-`Observability / latency monitoring` · `Infrastructure-as-config` · `Graceful degradation` · `Security headers`
+It's also built defensively: user-supplied URLs are validated and **private/loopback/cloud-metadata
+addresses are blocked (SSRF protection)** — including on every redirect hop.
 
 ---
 
-## 🚀 Deploy it free (Vercel)
+## 🏗️ Architecture
 
-No credit card, no configuration.
+```
+Browser ──▶  Express server ──▶  target website
+             │  • validate + SSRF-guard the URL
+             │  • fetch, follow redirects (max 5), 12s timeout
+             │  • parse HTML (cheerio) + read security headers
+             │  • run weighted checks → score + grade
+             ◀── JSON report ──┘
+```
+
+- **Stateless** — no database, no sessions; scales trivially.
+- **No API keys, no config** — nothing to set up or leak.
+- **Clean separation:** `guard` (safety) · `audit` (fetch + parse) · `checks` (pure scoring).
+
+**Cloud/backend skills shown:** REST API design · server-side HTTP & redirects · HTML parsing ·
+security-header analysis · **SSRF mitigation** · health checks · infrastructure-as-config · CI/CD deploy.
+
+---
+
+## 🚀 Deploy it free (Render)
+
+No credit card, no database.
 
 1. Push this repo to **GitHub**.
-2. Go to **https://vercel.com** → sign in with GitHub.
-3. **Add New… → Project** → import this repository.
-4. Leave everything at defaults (framework preset: **Other**) → **Deploy**.
-5. In ~1 minute you get a live URL — the `/api/*` functions and the dashboard are all live.
+2. Go to **https://render.com** → sign in with GitHub.
+3. **New + → Blueprint** → select this repo (it reads [`render.yaml`](./render.yaml)).
+   *Or* **New + → Web Service** with Build `npm install` and Start `npm start`.
+4. Pick the **Free** plan → **Deploy**. In ~1–2 minutes you get a public URL.
 
-Vercel auto-detects the static files and the `api/` serverless functions. Nothing else to set.
+> Free instances sleep after inactivity, so the first request may take ~30–60s to wake up.
 
 ---
 
 ## 🖥️ Run locally
 
-The dashboard is plain static files, so the simplest way is:
+Requires **Node.js 18+**.
 
 ```bash
-npm start          # serves the static site on http://localhost:3000 (demo mode)
+npm install
+npm start          # http://localhost:3000
 ```
 
-To run the **serverless functions locally** too (live mode), use the Vercel CLI:
+### Test
 
 ```bash
-npm i -g vercel
-vercel dev         # serves the site + /api functions on http://localhost:3000
+npm test           # URL-safety + scoring logic + a live audit of example.com
 ```
 
-### Tests
+---
+
+## 📡 API
+
+```
+GET /api/health              → { status: "ok", ... }
+GET /api/audit?url=<website>  → full JSON report (score, grade, checks, facts)
+```
+
+Example:
 
 ```bash
-npm test           # unit-tests every serverless handler (mock req/res)
+curl "http://localhost:3000/api/audit?url=example.com"
 ```
 
 ---
@@ -106,23 +114,19 @@ npm test           # unit-tests every serverless handler (mock req/res)
 
 ```
 .
-├── index.html          # dashboard markup
-├── styles.css          # dark glassmorphism theme
-├── app.js              # live telemetry, latency chart, rate-limit demo, graceful fallback
-├── api/                # serverless functions (Vercel Node, zero deps)
-│   ├── health.js       #   runtime telemetry + cold/warm start
-│   ├── ping.js         #   minimal endpoint for latency sampling
-│   ├── region.js       #   edge region + geo headers
-│   ├── echo.js         #   request inspector (IP masked)
-│   └── ratelimit.js    #   token-bucket rate limiter (429)
-├── test/handlers.test.mjs   # handler unit tests
-├── assets/logo.svg
-├── vercel.json         # headers + cache config
+├── server.js            # Express server: static UI + /api/audit + /api/health
+├── src/
+│   ├── guard.js         # URL normalisation + SSRF / private-host protection
+│   ├── audit.js         # fetch (redirect chain, timeout) + HTML parsing (cheerio)
+│   └── checks.js        # pure, testable scoring → categorised checks + grade
+├── public/              # frontend (index.html, styles.css, app.js, logo.svg)
+├── test/audit.test.mjs  # safety + scoring + live-fetch tests
+├── render.yaml          # one-click free deploy
 └── package.json
 ```
 
 ---
 
 <div align="center">
-<sub>Nimbus · serverless edge console · no API keys, no database — just cloud-native fundamentals, done cleanly.</sub>
+<sub>Beacon · a real, useful website auditor · no database, no API keys — just a clean backend, done right.</sub>
 </div>
