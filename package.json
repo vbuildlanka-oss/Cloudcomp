@@ -1,0 +1,15 @@
+{
+  "name": "nimbus-edge-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nimbus — a live serverless edge console (Vercel functions + static dashboard).",
+  "scripts": {
+    "test": "node test/handlers.test.mjs",
+    "dev": "vercel dev",
+    "start": "python3 -m http.server 3000"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
