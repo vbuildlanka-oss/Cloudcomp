@@ -64,17 +64,34 @@ security-header analysis · **SSRF mitigation** · health checks · infrastructu
 
 ---
 
-## 🚀 Deploy it free (Render)
+## 🚀 Deploy it free
 
 No credit card, no database.
 
-1. Push this repo to **GitHub**.
-2. Go to **https://render.com** → sign in with GitHub.
-3. **New + → Blueprint** → select this repo (it reads [`render.yaml`](./render.yaml)).
-   *Or* **New + → Web Service** with Build `npm install` and Start `npm start`.
-4. Pick the **Free** plan → **Deploy**. In ~1–2 minutes you get a public URL.
+### Recommended: Vercel (no cold-start sleep) ⚡
 
-> Free instances sleep after inactivity, so the first request may take ~30–60s to wake up.
+Vercel runs the API as **serverless functions** that cold-start in well under a
+second and **don't spin down for 30–60s** the way a free always-on web service
+does. That's what removes the "server is taking a while to wake up" problem.
+
+1. Push this repo to **GitHub**.
+2. Go to **https://vercel.com** → sign in with GitHub.
+3. **Add New… → Project** → import this repo. No settings to change — Vercel
+   auto-detects the static frontend in [`public/`](./public) and the functions
+   in [`api/`](./api), and reads [`vercel.json`](./vercel.json).
+4. **Deploy**. In ~1 minute you get a public URL. Done.
+
+> How it maps: `public/*` is served as the static site, `GET /api/audit` →
+> [`api/audit.js`](./api/audit.js), `GET /api/health` → [`api/health.js`](./api/health.js).
+> All three call the same engine in [`src/`](./src).
+
+### Alternative: Render (Blueprint)
+
+Also works via [`render.yaml`](./render.yaml): on Render pick **New + →
+Blueprint** and select this repo. Note the **free** Render web service sleeps
+after ~15 min idle, so the first request can take 30–60s to wake — the frontend
+now waits patiently (up to 60s) and retries so it still succeeds, but Vercel is
+the smoother experience.
 
 ---
 
@@ -114,16 +131,24 @@ curl "http://localhost:3000/api/audit?url=example.com"
 
 ```
 .
-├── server.js            # Express server: static UI + /api/audit + /api/health
+├── api/                 # Vercel serverless functions (share the src/ engine)
+│   ├── audit.js         #   GET /api/audit  — reuses src/audit.js
+│   └── health.js        #   GET /api/health
+├── server.js            # Express server for local dev / Render (same endpoints)
 ├── src/
 │   ├── guard.js         # URL normalisation + SSRF / private-host protection
 │   ├── audit.js         # fetch (redirect chain, timeout) + HTML parsing (cheerio)
 │   └── checks.js        # pure, testable scoring → categorised checks + grade
 ├── public/              # frontend (index.html, styles.css, app.js, logo.svg)
 ├── test/audit.test.mjs  # safety + scoring + live-fetch tests
-├── render.yaml          # one-click free deploy
+├── vercel.json          # Vercel deploy config (function limits + routing)
+├── render.yaml          # Render Blueprint (alternative deploy)
 └── package.json
 ```
+
+> The core engine lives in `src/`. Both the Express server (`server.js`) and the
+> Vercel functions (`api/`) are thin adapters over it, so behaviour is identical
+> everywhere.
 
 ---
 

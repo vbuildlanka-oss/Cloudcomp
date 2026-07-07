@@ -31,25 +31,36 @@
     return `${(b / 1024 / 1024).toFixed(2)} MB`;
   }
 
-  // On free hosting the server sleeps when idle; the first request can hit it
-  // mid-wake and return a transient error (404/502/503). These are NOT real
+  // On free hosting a server can be waking from idle; the first request may hit
+  // it mid-wake and return a transient error (502/503/…). These are NOT real
   // audit errors (our API uses 400/422 for those), so we transparently retry.
   const TRANSIENT = new Set([404, 408, 425, 429, 500, 502, 503, 504]);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // How long we're willing to keep retrying while an instance wakes up. On
+  // Vercel this is effectively never used (sub-second cold starts); it exists
+  // so that even a slow free host eventually succeeds instead of us bailing
+  // out after a few seconds.
+  const WAKE_BUDGET_MS = 60000;
 
   /** Fire-and-forget wake-up so the server is warming before the user clicks. */
   function warmUp() {
     fetch("/api/health", { cache: "no-store" }).catch(() => {});
   }
 
-  async function requestAudit(url, maxAttempts = 5) {
+  async function requestAudit(url) {
+    const deadline = Date.now() + WAKE_BUDGET_MS;
+    let lastServerError = null;
+
     for (let attempt = 1; ; attempt += 1) {
       let res;
       try {
         res = await fetch(`/api/audit?url=${encodeURIComponent(url)}`, { cache: "no-store" });
       } catch {
-        // network-level failure — treat as the server still waking up
-        if (attempt >= maxAttempts) throw new Error("Couldn't reach the server. Please try again in a moment.");
+        // Network-level failure — treat as the server still waking up.
+        if (Date.now() >= deadline) {
+          throw new Error("Couldn't reach the server. Please check your connection and try again.");
+        }
         await coldStartWait(attempt);
         continue;
       }
@@ -61,17 +72,21 @@
       if (!TRANSIENT.has(res.status)) {
         throw new Error(data.error || `Request failed (HTTP ${res.status}).`);
       }
-      // Transient (cold start) — retry until the instance is awake.
-      if (attempt >= maxAttempts) {
-        throw new Error("The server is taking a while to wake up. Please try once more.");
+      // Transient (cold start) — keep retrying until the instance is awake or
+      // we run out of patience.
+      lastServerError = data.error || null;
+      if (Date.now() >= deadline) {
+        throw new Error(lastServerError || "The server didn't respond in time. Please try once more.");
       }
       await coldStartWait(attempt);
     }
   }
 
   function coldStartWait(attempt) {
-    $("loading-note").textContent = "Waking up the free server… hang tight ⏳";
-    return sleep(Math.min(700 * attempt, 2500));
+    $("loading-note").textContent =
+      attempt === 1 ? "Warming up the server…" : "Still waking the server up… hang tight ⏳";
+    // Gentle backoff, capped at 3s between tries.
+    return sleep(Math.min(1000 * attempt, 3000));
   }
 
   async function audit(url) {
