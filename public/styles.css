@@ -138,6 +138,9 @@ body {
   padding: 24px 20px 36px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
   border-top: 1px solid var(--card-brd); color: var(--faint); font-size: 12.5px;
 }
+.footer .brand { display: inline-flex; align-items: center; gap: 2px; letter-spacing: 0.2px; }
+.footer .brand strong { color: var(--teal); font-weight: 700; letter-spacing: 0.3px; }
+.footer .brand sup { font-size: 8px; opacity: 0.8; }
 
 @media (max-width: 560px) {
   .search { flex-direction: column; }
