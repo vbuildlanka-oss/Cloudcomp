@@ -31,23 +31,62 @@
     return `${(b / 1024 / 1024).toFixed(2)} MB`;
   }
 
+  // On free hosting the server sleeps when idle; the first request can hit it
+  // mid-wake and return a transient error (404/502/503). These are NOT real
+  // audit errors (our API uses 400/422 for those), so we transparently retry.
+  const TRANSIENT = new Set([404, 408, 425, 429, 500, 502, 503, 504]);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /** Fire-and-forget wake-up so the server is warming before the user clicks. */
+  function warmUp() {
+    fetch("/api/health", { cache: "no-store" }).catch(() => {});
+  }
+
+  async function requestAudit(url, maxAttempts = 5) {
+    for (let attempt = 1; ; attempt += 1) {
+      let res;
+      try {
+        res = await fetch(`/api/audit?url=${encodeURIComponent(url)}`, { cache: "no-store" });
+      } catch {
+        // network-level failure — treat as the server still waking up
+        if (attempt >= maxAttempts) throw new Error("Couldn't reach the server. Please try again in a moment.");
+        await coldStartWait(attempt);
+        continue;
+      }
+
+      if (res.ok) return res.json();
+
+      const data = await res.json().catch(() => ({}));
+      // A real client/audit error (bad URL, unreachable site) — show it now.
+      if (!TRANSIENT.has(res.status)) {
+        throw new Error(data.error || `Request failed (HTTP ${res.status}).`);
+      }
+      // Transient (cold start) — retry until the instance is awake.
+      if (attempt >= maxAttempts) {
+        throw new Error("The server is taking a while to wake up. Please try once more.");
+      }
+      await coldStartWait(attempt);
+    }
+  }
+
+  function coldStartWait(attempt) {
+    $("loading-note").textContent = "Waking up the free server… hang tight ⏳";
+    return sleep(Math.min(700 * attempt, 2500));
+  }
+
   async function audit(url) {
     if (!url) return;
     hide($("report"), $("error"));
     $("loading-url").textContent = url;
+    $("loading-note").textContent = "";
     show($("loading"));
     btn.disabled = true;
 
     try {
-      const res = await fetch(`/api/audit?url=${encodeURIComponent(url)}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `Request failed (HTTP ${res.status}).`);
+      const data = await requestAudit(url);
       render(data);
     } catch (err) {
-      $("error-msg").textContent =
-        err.message === "Failed to fetch"
-          ? "Couldn't reach the Beacon server. Is it running?"
-          : err.message;
+      $("error-msg").textContent = err.message || "Something went wrong. Please try again.";
       hide($("loading"));
       show($("error"));
     } finally {
@@ -138,4 +177,8 @@
       audit(chip.dataset.url);
     });
   });
+
+  // Warm the server as early as possible so the first real click is instant.
+  warmUp();
+  input.addEventListener("focus", warmUp, { once: true });
 })();
